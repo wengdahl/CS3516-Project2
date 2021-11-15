@@ -13,7 +13,7 @@ init-bin:
 	
 all-debug:
 	make init-bin
-	$(CCPP) -g -DDEBUG -I $(CPLUS_INCLUDE_PATH) $(SRC_PATH) -o bin/Debug/wireview.out
+	$(CCPP) -g -DDEBUG -I $(CPLUS_INCLUDE_PATH) $(SRC_PATH) -lpcap -o bin/Debug/wireview.out
 
 clean:
 	rm -f -r bin/

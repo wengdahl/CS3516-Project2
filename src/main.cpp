@@ -21,6 +21,11 @@ void got_packet(u_char *empty, const struct pcap_pkthdr *header, const u_char *p
             currTime.tv_sec - startTime.tv_sec,
             currTime.tv_usec - startTime.tv_usec
         };
+        //If microseconds is negative, subtract one from seconds
+        if(elapsedTime.tv_usec<0){
+            elapsedTime.tv_sec -= 1;
+            elapsedTime.tv_usec += 1000000;
+        }
     }
 
     // ether_header *ethernet = (ether_header*)packet;
@@ -69,6 +74,14 @@ int main(int argc, char *argv[])
             << localTimeInfo->tm_min << ":"
             << localTimeInfo->tm_sec << ":"
             << startTime.tv_usec << std::endl;
+        
+        // Print elapsed time
+        uint32_t duration = elapsedTime.tv_sec;
+        std::cout << "Packet Capture Duration: " 
+            << duration/3600 << ":"
+            << (duration%3600)/60 << ":"
+            << (duration%60) << ":"
+            << elapsedTime.tv_usec << std::endl;
 
         return(0);
 }

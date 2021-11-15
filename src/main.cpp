@@ -30,6 +30,11 @@ int main(int argc, char *argv[])
 
         int n = pcap_loop(handle, 0, got_packet, NULL);
 
+        //Close pcap
+        pcap_close(handle);
+
+        //Print packet information
         printf("Parsing complete: %i\n",n);
+
         return(0);
 }

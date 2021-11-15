@@ -1,6 +1,7 @@
 #include <iostream>
 #include <stdio.h>
 #include <pcap.h>
+#include <net/ethernet.h>
 
 uint32_t totalPackets = 0;
 bool parseFirstPacket = true;
@@ -21,6 +22,10 @@ void got_packet(u_char *empty, const struct pcap_pkthdr *header, const u_char *p
             currTime.tv_usec - startTime.tv_usec
         };
     }
+
+    // ether_header *ethernet = (ether_header*)packet;
+    // uint8_t *destAddr = ethernet->ether_dhost;
+    // std::cout << destAddr[0] << "." << destAddr[1] << "." << destAddr[2] << "." << destAddr[3] << std::endl;
 
     totalPackets++;
     printf("Parsing packet\n");

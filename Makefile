@@ -10,7 +10,7 @@ all:
 init-bin:
 	mkdir -p bin
 	mkdir -p bin/Debug
-	
+
 all-debug:
 	make init-bin
 	$(CCPP) -g -DDEBUG -I $(CPLUS_INCLUDE_PATH) $(SRC_PATH) -lpcap -o bin/Debug/wireview.out

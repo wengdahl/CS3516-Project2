@@ -56,9 +56,10 @@ int main(int argc, char *argv[])
         //Close pcap
         pcap_close(handle);
 
-        //Print packet information
+        //Print packet count
         std::cout << "Total Packets Parsed: " << totalPackets << std::endl;
-
+        
+        // Print packet capture timestamp
         tm *localTimeInfo = localtime(&startTime.tv_sec);
         std::cout << "Packet Capture Timestamp: " 
             << localTimeInfo->tm_mon + 1 << "/"

@@ -28,9 +28,48 @@ void got_packet(u_char *empty, const struct pcap_pkthdr *header, const u_char *p
         }
     }
 
-    // ether_header *ethernet = (ether_header*)packet;
-    // uint8_t *destAddr = ethernet->ether_dhost;
-    // std::cout << destAddr[0] << "." << destAddr[1] << "." << destAddr[2] << "." << destAddr[3] << std::endl;
+    /*ether_header *ethernet = (ether_header*)packet;
+    u_char *destAddr = ethernet->ether_dhost;
+    std::cout << "Destination MAC: "<< destAddr << std::endl;//[0] << "." << destAddr[1] << "." << destAddr[2] << "." << destAddr[3] << std::endl;
+
+    u_char *sourceAddr = ethernet->ether_shost;
+    std::cout << "Source MAC: "<< sourceAddr[0] << "." << sourceAddr[1] << "." << sourceAddr[2] << "." << sourceAddr[3] << std::endl;
+    */
+
+
+    //Start new header code - got from http://yuba.stanford.edu/~casado/pcap/section2.html
+    
+    //Parse ethernet header
+    struct ether_header * ethHeaderPntr = (struct ether_header *) packet;
+
+    /* Do a couple of checks to see what packet type we have..*/
+    if (ntohs (ethHeaderPntr->ether_type) == ETHERTYPE_IP){
+        std::cout << "Ethernet type hex: " << std::hex << ntohs(ethHeaderPntr->ether_type)<< " is an IPv4 packet"<< std::endl;
+    }else  if (ntohs (ethHeaderPntr->ether_type) == ETHERTYPE_ARP){
+        std::cout << "Ethernet type hex: " << std::hex << ntohs(ethHeaderPntr->ether_type)<< " is an ARP packet"<< std::endl;
+    }else {
+        std::cout << "Ethernet type hex: " << std::hex << ntohs(ethHeaderPntr->ether_type)<< " is not IPv4 or ARP packet"<< std::endl;
+        exit(1);
+    }
+
+    // This does nto currently work with cout, need to figure out how to format it correctly
+    u_char * ptr = ethHeaderPntr->ether_dhost;
+    int i = ETHER_ADDR_LEN;
+    printf(" Destination Address:  ");
+    do{
+        printf("%s%x",(i == ETHER_ADDR_LEN) ? " " : ":",*ptr++);
+    }while(--i>0);
+    printf("\n");
+
+    ptr = ethHeaderPntr->ether_shost;
+    i = ETHER_ADDR_LEN;
+    std:: cout << " Source Address:  ";
+    do{
+        printf("%s%x",(i == ETHER_ADDR_LEN) ? " " : ":",*ptr++);
+    }while(--i>0);
+    std::cout << std::endl;
+
+    /// end new code
 
     totalPackets++;
     printf("Parsing packet\n");

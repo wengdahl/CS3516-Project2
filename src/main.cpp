@@ -1,7 +1,8 @@
 #include <iostream>
 #include <stdio.h>
 #include <pcap.h>
-#include <net/ethernet.h>
+//#include <net/ethernet.h>
+#include <netinet/ether.h>//contains ether_ntoa
 
 uint32_t totalPackets = 0;
 bool parseFirstPacket = true;
@@ -42,7 +43,7 @@ void got_packet(u_char *empty, const struct pcap_pkthdr *header, const u_char *p
     //Parse ethernet header
     struct ether_header * ethHeaderPntr = (struct ether_header *) packet;
 
-    /* Do a couple of checks to see what packet type we have..*/
+    // Check packet type, can omit the prints later
     if (ntohs (ethHeaderPntr->ether_type) == ETHERTYPE_IP){
         std::cout << "Ethernet type hex: " << std::hex << ntohs(ethHeaderPntr->ether_type)<< " is an IPv4 packet"<< std::endl;
     }else  if (ntohs (ethHeaderPntr->ether_type) == ETHERTYPE_ARP){
@@ -52,22 +53,9 @@ void got_packet(u_char *empty, const struct pcap_pkthdr *header, const u_char *p
         exit(1);
     }
 
-    // This does nto currently work with cout, need to figure out how to format it correctly
-    u_char * ptr = ethHeaderPntr->ether_dhost;
-    int i = ETHER_ADDR_LEN;
-    printf(" Destination Address:  ");
-    do{
-        printf("%s%x",(i == ETHER_ADDR_LEN) ? " " : ":",*ptr++);
-    }while(--i>0);
-    printf("\n");
-
-    ptr = ethHeaderPntr->ether_shost;
-    i = ETHER_ADDR_LEN;
-    std:: cout << " Source Address:  ";
-    do{
-        printf("%s%x",(i == ETHER_ADDR_LEN) ? " " : ":",*ptr++);
-    }while(--i>0);
-    std::cout << std::endl;
+    //Print using ether_ntoa
+    std::cout << " Destination Address:  " <<   ether_ntoa((struct ether_addr *)&ethHeaderPntr->ether_dhost) << std::endl;
+    std::cout << " Source Address:  " <<        ether_ntoa((struct ether_addr *)&ethHeaderPntr->ether_shost) << std::endl;
 
     /// end new code
 

@@ -1,5 +1,7 @@
 #include <iostream>
 #include <stdio.h>
+#include <map>
+#include <vector>
 #include <pcap.h>
 #include <net/ethernet.h>
 #include <netinet/ether.h>//contains ether_ntoa
@@ -10,6 +12,28 @@
 uint32_t totalPackets = 0;
 timeval startTime;
 timeval elapsedTime;
+
+// Key = Source MAC address
+// Value = Occurence count
+std::map<std::string, int> uniqueMACSource;
+// Key = Recieving MAC address
+// Value = ...
+std::map<std::string, int> uniqueMACRecv;
+
+// Key = Source IP address
+// Value = Occurence count
+std::map<std::string, int> uniqueIPSource;
+// Key = Recieving IP address
+// Value = ...
+std::map<std::string, int> uniqueIPRecv;
+
+// Key = IP addresses participating in ARP
+// Value = MAC addresses corresponding to the IP address
+//         If not known, output nullptr to represent it being unknown
+std::map<std::string, std::string> ipMACPairing;
+
+std::vector<int> udpSourcePorts;
+std::vector<int> udpDestPorts;
 
 struct PacketStruct {
     bool firstPacket = true;
@@ -30,6 +54,14 @@ struct PacketStruct {
   unsigned char arp_tha[6];
   unsigned char arp_tpa[4];
 };*/
+
+void incrAddrOccurence(const std::string addr, std::map<std::string, int> &addrOccurMap) {    
+    if(!addrOccurMap.count(addr)) {
+        addrOccurMap[addr] = 1;
+    } else {
+        addrOccurMap[addr] = addrOccurMap[addr]++;
+    }
+}
 
 //Callback - Process packet
 void got_packet(u_char *structPointer, const struct pcap_pkthdr *header, const u_char *packet)
@@ -69,16 +101,27 @@ void got_packet(u_char *structPointer, const struct pcap_pkthdr *header, const u
     }
 
 
-    //Start new header code - got from http://yuba.stanford.edu/~casado/pcap/section2.html
+    //Modified header code - got from http://yuba.stanford.edu/~casado/pcap/section2.html
     
     //Parse ethernet header
     struct ether_header * ethHeaderPntr = (struct ether_header *) packet;
 
+    // Store MAC addresses
+    char* macSourceAddr = ether_ntoa((struct ether_addr *)&ethHeaderPntr->ether_shost);
+    char* macDestAddr = ether_ntoa((struct ether_addr *)&ethHeaderPntr->ether_dhost);
 
-    /// end new code
+    // Retain MAC addresses
+    incrAddrOccurence(macSourceAddr, uniqueMACSource);
+    incrAddrOccurence(macDestAddr, uniqueMACRecv);
+
+    //Print using ether_ntoa
+    std::cout << "Source MAC Address: " << macSourceAddr << std::endl;
+    std::cout << "Destination MAC Address: " << macDestAddr << std::endl;
+
+    /* end new code */
 
     totalPackets++;
-    printf("Parsing packet\n");
+    std::cout << "Parsing packet\n";
 
 
     // Check packet type, can omit the prints later
@@ -97,6 +140,10 @@ void got_packet(u_char *structPointer, const struct pcap_pkthdr *header, const u
         inet_ntop( AF_INET, &ip_header->saddr, sourceAddr, INET_ADDRSTRLEN);
         inet_ntop( AF_INET, &ip_header->daddr, destAddr, INET_ADDRSTRLEN);
 
+        // Retain IP addresses
+        incrAddrOccurence(sourceAddr, uniqueIPSource);
+        incrAddrOccurence(destAddr, uniqueIPRecv);
+
         std::cout << std::dec << "Source IP Address: " << sourceAddr << std::endl;
         std::cout << "Destination IP address: " << destAddr<< std::endl;
 
@@ -108,6 +155,10 @@ void got_packet(u_char *structPointer, const struct pcap_pkthdr *header, const u
             //Print UDP ports
             std::cout << std::dec << "Source Port: " << ntohs(udp_header->uh_sport) << std::endl;
             std::cout << "Destination Port: " <<  ntohs(udp_header->uh_dport) << std::endl;
+
+            // Retain list of source/dest. UDP ports
+            udpSourcePorts.push_back(ntohs(udp_header->uh_sport));
+            udpDestPorts.push_back(ntohs(udp_header->uh_dport));
         }
 
         //tot_len
@@ -130,17 +181,24 @@ void got_packet(u_char *structPointer, const struct pcap_pkthdr *header, const u
             std::cout << std::dec << "ARP Request" << std::endl;
 
             //Print using ether_ntoa - I think we are supposed to ignore MAC address form ether header for ARP, ARP header contaisn that information, and it could be "broadcast" address for ARP
-            std::cout << "Source MAC Address: " <<   ether_ntoa((struct ether_addr *)&arp_header_pntr->arp_sha) << std::endl;
+            std::cout << "Source MAC Address: " << ether_ntoa((struct ether_addr *)&arp_header_pntr->arp_sha) << std::endl;
             std::cout << "Destination MAC Address: " << "Unknown" << std::endl; // Not porvided in ARP request
 
+            // Retain IP/MAC pairing (target is null)
+            ipMACPairing[sourceAddr] = ether_ntoa((struct ether_addr *)&arp_header_pntr->arp_sha);
+            if(!ipMACPairing.count(destAddr)) {
+                ipMACPairing[destAddr] = nullptr;
+            }
         }else{
             std::cout << std::dec << "ARP Reply"<< std::endl;
             //Print using ether_ntoa - I think we are supposed to ignore MAC address form ether header for ARP, ARP header contaisn that information, and it could be "broadcast" address for ARP
-            std::cout << "Source MAC Address: " <<   ether_ntoa((struct ether_addr *)&arp_header_pntr->arp_sha) << std::endl;
-            std::cout << "Destination MAC Address: " <<        ether_ntoa((struct ether_addr *)&arp_header_pntr->arp_tha) << std::endl;
+            std::cout << "Source MAC Address: " << ether_ntoa((struct ether_addr *)&arp_header_pntr->arp_sha) << std::endl;
+            std::cout << "Destination MAC Address: " << ether_ntoa((struct ether_addr *)&arp_header_pntr->arp_tha) << std::endl;
+
+            // Retain IP/MAC pairing
+            ipMACPairing[sourceAddr] = ether_ntoa((struct ether_addr *)&arp_header_pntr->arp_sha);
+            ipMACPairing[destAddr] = ether_ntoa((struct ether_addr *)&arp_header_pntr->arp_tha);
         }
-
-
     }else {
         std::cout << "Ethernet type hex: " << std::hex << ntohs(ethHeaderPntr->ether_type)<< " is not IPv4 or ARP packet"<< std::endl;
     }
@@ -158,15 +216,15 @@ int main(int argc, char *argv[])
         //Open offline, usinf argv as name of file to open
 	    handle = pcap_open_offline(fname, errbuf);
         if (handle == NULL) {
-            fprintf(stderr, "Couldn't open pcap file %s: %s\n", fname, errbuf);
-            return(2);
+            std::cerr << "Couldn't open pcap file " << fname << ": " << errbuf << std::endl;
+            return 2;
         }
 
         //Check data is from ethernet
         int datalink = pcap_datalink(handle);
         if(datalink != 1){
-            fprintf(stderr, "pcap not ethernet, return: %i\n", datalink);
-            return(2);
+            std::cerr << "pcap not ethernet, return: " << datalink << std::endl;
+            return 2;
         }
 
 

@@ -5,6 +5,7 @@
 #include <netinet/ether.h>//contains ether_ntoa
 #include <netinet/ip.h> //IP header
 #include <netinet/udp.h> //UDP header
+#include <net/if_arp.h> //ARP header
 
 uint32_t totalPackets = 0;
 timeval startTime;
@@ -17,6 +18,18 @@ struct PacketStruct {
     int total;
     int count;
 };
+
+/*struct ether_arp {
+  unsigned short arp_hrd;
+  unsigned short arp_pro;
+  unsigned char arp_hln;
+  unsigned char arp_pln;
+  unsigned short arp_op;
+  unsigned char arp_sha[6];
+  unsigned char arp_spa[4];
+  unsigned char arp_tha[6];
+  unsigned char arp_tpa[4];
+};*/
 
 //Callback - Process packet
 void got_packet(u_char *structPointer, const struct pcap_pkthdr *header, const u_char *packet)
@@ -62,10 +75,6 @@ void got_packet(u_char *structPointer, const struct pcap_pkthdr *header, const u
     struct ether_header * ethHeaderPntr = (struct ether_header *) packet;
 
 
-    //Print using ether_ntoa
-    std::cout << "Destination MAC Address: " <<   ether_ntoa((struct ether_addr *)&ethHeaderPntr->ether_dhost) << std::endl;
-    std::cout << "Source MAC Address: " <<        ether_ntoa((struct ether_addr *)&ethHeaderPntr->ether_shost) << std::endl;
-
     /// end new code
 
     totalPackets++;
@@ -75,6 +84,10 @@ void got_packet(u_char *structPointer, const struct pcap_pkthdr *header, const u
     // Check packet type, can omit the prints later
     if (ntohs (ethHeaderPntr->ether_type) == ETHERTYPE_IP){
         std::cout << "Ethernet type hex: " << std::hex << ntohs(ethHeaderPntr->ether_type)<< " is an IPv4 packet"<< std::endl;
+
+        //Print using ether_ntoa - I think we are supposed to ignore MAC address form ether header for ARP, ARP header contaisn that information, and it could be "broadcast" address for ARP
+        std::cout << "Destination MAC Address: " <<   ether_ntoa((struct ether_addr *)&ethHeaderPntr->ether_dhost) << std::endl;
+        std::cout << "Source MAC Address: " <<        ether_ntoa((struct ether_addr *)&ethHeaderPntr->ether_shost) << std::endl;
 
         iphdr *ip_header = (struct iphdr *) (packet + ETH_HLEN);
 
@@ -88,11 +101,11 @@ void got_packet(u_char *structPointer, const struct pcap_pkthdr *header, const u
         std::cout << "Destination IP address: " << destAddr<< std::endl;
 
         //Check UDP - Protocol 17 is UDP, anything else is ignored
-        std::cout << "Protocol: " << static_cast<unsigned>(ip_header->protocol) << std::endl;
-         std::cout << std::dec << "IP len: " << ntohs(ip_header->tot_len) <<std::endl;
         if(static_cast<unsigned>(ip_header->protocol) == 17){
+            //IP header length = 32* IHL (internet header length) bits = 4*IHL bytes
             udphdr *udp_header = (struct udphdr *) (packet + ETH_HLEN + 4*static_cast<unsigned>(ip_header->ihl));
             
+            //Print UDP ports
             std::cout << std::dec << "Source Port: " << ntohs(udp_header->uh_sport) << std::endl;
             std::cout << "Destination Port: " <<  ntohs(udp_header->uh_dport) << std::endl;
         }
@@ -100,6 +113,34 @@ void got_packet(u_char *structPointer, const struct pcap_pkthdr *header, const u
         //tot_len
     }else  if (ntohs (ethHeaderPntr->ether_type) == ETHERTYPE_ARP){
         std::cout << "Ethernet type hex: " << std::hex << ntohs(ethHeaderPntr->ether_type)<< " is an ARP packet"<< std::endl;
+
+        ether_arp *arp_header_pntr = (struct ether_arp *) (packet + ETH_HLEN);
+
+        //Both IP addresses known
+        char sourceAddr[INET_ADDRSTRLEN];
+        char destAddr[INET_ADDRSTRLEN];
+        //Convert from number to dotted decimal
+        inet_ntop( AF_INET, &arp_header_pntr->arp_spa, sourceAddr, INET_ADDRSTRLEN);
+        inet_ntop( AF_INET, &arp_header_pntr->arp_tpa, destAddr, INET_ADDRSTRLEN);
+
+        std::cout << std::dec << "Source IP Address: " << sourceAddr << std::endl;
+        std::cout << "Destination IP address: " << destAddr<< std::endl;
+
+        if(ntohs(arp_header_pntr->arp_op) == 1){
+            std::cout << std::dec << "ARP Request" << std::endl;
+
+            //Print using ether_ntoa - I think we are supposed to ignore MAC address form ether header for ARP, ARP header contaisn that information, and it could be "broadcast" address for ARP
+            std::cout << "Source MAC Address: " <<   ether_ntoa((struct ether_addr *)&arp_header_pntr->arp_sha) << std::endl;
+            std::cout << "Destination MAC Address: " << "Unknown" << std::endl; // Not porvided in ARP request
+
+        }else{
+            std::cout << std::dec << "ARP Reply"<< std::endl;
+            //Print using ether_ntoa - I think we are supposed to ignore MAC address form ether header for ARP, ARP header contaisn that information, and it could be "broadcast" address for ARP
+            std::cout << "Source MAC Address: " <<   ether_ntoa((struct ether_addr *)&arp_header_pntr->arp_sha) << std::endl;
+            std::cout << "Destination MAC Address: " <<        ether_ntoa((struct ether_addr *)&arp_header_pntr->arp_tha) << std::endl;
+        }
+
+
     }else {
         std::cout << "Ethernet type hex: " << std::hex << ntohs(ethHeaderPntr->ether_type)<< " is not IPv4 or ARP packet"<< std::endl;
     }

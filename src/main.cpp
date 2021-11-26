@@ -177,7 +177,7 @@ int main(int argc, char *argv[])
         pcap_close(handle);
 
         //Print packet count
-        std::cout << "Total Packets Parsed: " << totalPackets << std::endl;
+        std::cout << "Total Packets Parsed: " << std::dec << totalPackets << std::endl;
         
         // Print packet capture timestamp
         tm *localTimeInfo = localtime(&startTime.tv_sec);
@@ -214,8 +214,8 @@ int main(int argc, char *argv[])
 
        //Report the average, minimum, and maximum packet sizes. The packet size refers to everything beyond the tcpdump header
        std::cout << "Packet minimum size: " << packetData.min
-            << " Packet maximum size: " << packetData.max
-            << " Packet average (mean) size: " << (packetData.total/packetData.count) << std::endl;
+            << ", Packet maximum size: " << packetData.max
+            << ", Packet average (mean) size: " << (packetData.total/packetData.count) << std::endl;
 
         return(0);
 }

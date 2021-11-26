@@ -3,6 +3,7 @@
 #include <pcap.h>
 #include <net/ethernet.h>
 #include <netinet/ether.h>//contains ether_ntoa
+#include <netinet/ip.h>
 
 uint32_t totalPackets = 0;
 timeval startTime;
@@ -61,8 +62,8 @@ void got_packet(u_char *structPointer, const struct pcap_pkthdr *header, const u
 
 
     //Print using ether_ntoa
-    std::cout << " Destination Address:  " <<   ether_ntoa((struct ether_addr *)&ethHeaderPntr->ether_dhost) << std::endl;
-    std::cout << " Source Address:  " <<        ether_ntoa((struct ether_addr *)&ethHeaderPntr->ether_shost) << std::endl;
+    std::cout << "Destination MAC Address: " <<   ether_ntoa((struct ether_addr *)&ethHeaderPntr->ether_dhost) << std::endl;
+    std::cout << "Source MAC Address: " <<        ether_ntoa((struct ether_addr *)&ethHeaderPntr->ether_shost) << std::endl;
 
     /// end new code
 
@@ -73,12 +74,25 @@ void got_packet(u_char *structPointer, const struct pcap_pkthdr *header, const u
     // Check packet type, can omit the prints later
     if (ntohs (ethHeaderPntr->ether_type) == ETHERTYPE_IP){
         std::cout << "Ethernet type hex: " << std::hex << ntohs(ethHeaderPntr->ether_type)<< " is an IPv4 packet"<< std::endl;
+
+        iphdr *ip_header = (struct iphdr *) (packet + ETH_HLEN);
+
+        char sourceAddr[INET_ADDRSTRLEN];
+        char destAddr[INET_ADDRSTRLEN];
+        //Convert from number to dotted decimal
+        inet_ntop( AF_INET, &ip_header->saddr, sourceAddr, INET_ADDRSTRLEN);
+        inet_ntop( AF_INET, &ip_header->daddr, destAddr, INET_ADDRSTRLEN);
+
+        std::cout << std::dec << "Source IP Address: " << sourceAddr << std::endl;
+        std::cout << "Destination IP address: " << destAddr<< std::endl;
     }else  if (ntohs (ethHeaderPntr->ether_type) == ETHERTYPE_ARP){
         std::cout << "Ethernet type hex: " << std::hex << ntohs(ethHeaderPntr->ether_type)<< " is an ARP packet"<< std::endl;
     }else {
         std::cout << "Ethernet type hex: " << std::hex << ntohs(ethHeaderPntr->ether_type)<< " is not IPv4 or ARP packet"<< std::endl;
-        exit(1);
     }
+
+    //Print empty line between packets
+    std::cout << std::endl;
 }
 
 int main(int argc, char *argv[])

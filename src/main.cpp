@@ -3,7 +3,8 @@
 #include <pcap.h>
 #include <net/ethernet.h>
 #include <netinet/ether.h>//contains ether_ntoa
-#include <netinet/ip.h>
+#include <netinet/ip.h> //IP header
+#include <netinet/udp.h> //UDP header
 
 uint32_t totalPackets = 0;
 timeval startTime;
@@ -85,6 +86,18 @@ void got_packet(u_char *structPointer, const struct pcap_pkthdr *header, const u
 
         std::cout << std::dec << "Source IP Address: " << sourceAddr << std::endl;
         std::cout << "Destination IP address: " << destAddr<< std::endl;
+
+        //Check UDP - Protocol 17 is UDP, anything else is ignored
+        std::cout << "Protocol: " << static_cast<unsigned>(ip_header->protocol) << std::endl;
+         std::cout << std::dec << "IP len: " << ntohs(ip_header->tot_len) <<std::endl;
+        if(static_cast<unsigned>(ip_header->protocol) == 17){
+            udphdr *udp_header = (struct udphdr *) (packet + ETH_HLEN + 4*static_cast<unsigned>(ip_header->ihl));
+            
+            std::cout << std::dec << "Source Port: " << ntohs(udp_header->uh_sport) << std::endl;
+            std::cout << "Destination Port: " <<  ntohs(udp_header->uh_dport) << std::endl;
+        }
+
+        //tot_len
     }else  if (ntohs (ethHeaderPntr->ether_type) == ETHERTYPE_ARP){
         std::cout << "Ethernet type hex: " << std::hex << ntohs(ethHeaderPntr->ether_type)<< " is an ARP packet"<< std::endl;
     }else {

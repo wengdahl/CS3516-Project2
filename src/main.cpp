@@ -105,7 +105,7 @@ void got_packet(u_char *structPointer, const struct pcap_pkthdr *header, const u
     #ifdef DEBUG
     //Print using ether_ntoa
     std::cout << "Source MAC Address: " << macSourceAddr << std::endl;
-    std::cout << "Destination MAC Address: " << macDestAddr << std::endl << std::endl;
+    std::cout << "Destination MAC Address: " << macDestAddr << std::endl;
     #endif
 
     /* end new code */
@@ -183,9 +183,9 @@ void got_packet(u_char *structPointer, const struct pcap_pkthdr *header, const u
             #endif
 
             // Retain IP/MAC pairing (target is null)
-            ipMACPairing[sourceAddr] = ether_ntoa((struct ether_addr *)&arp_header_pntr->arp_sha);
+            ipMACPairing[sourceAddr] = std::string(ether_ntoa((struct ether_addr *)&arp_header_pntr->arp_sha));
             if(!ipMACPairing.count(destAddr)) {
-                ipMACPairing[destAddr] = nullptr;
+                ipMACPairing[destAddr] = "Unknown";
             }
         }else{
             #ifdef DEBUG
@@ -196,8 +196,8 @@ void got_packet(u_char *structPointer, const struct pcap_pkthdr *header, const u
             #endif
             
             // Retain IP/MAC pairing
-            ipMACPairing[sourceAddr] = ether_ntoa((struct ether_addr *)&arp_header_pntr->arp_sha);
-            ipMACPairing[destAddr] = ether_ntoa((struct ether_addr *)&arp_header_pntr->arp_tha);
+            ipMACPairing[sourceAddr] = std::string(ether_ntoa((struct ether_addr *)&arp_header_pntr->arp_sha));
+            ipMACPairing[destAddr] = std::string(ether_ntoa((struct ether_addr *)&arp_header_pntr->arp_tha));
         }
     }else {
         #ifdef DEBUG
@@ -266,9 +266,6 @@ int main(int argc, char *argv[])
 
     //Close pcap
     pcap_close(handle);
-
-    //Print packet count
-    std::cout << "Total Packets Parsed: " << std::dec << totalPackets << std::endl;
     
     // Print packet capture timestamp
     tm *localTimeInfo = localtime(&startTime.tv_sec);
@@ -289,9 +286,11 @@ int main(int argc, char *argv[])
         << (duration%60) << ":"
         << elapsedTime.tv_usec << std::endl;
 
+    //Print packet count
+    std::cout << "Total Packets Parsed: " << std::dec << totalPackets << std::endl;
+
     //Print total number of packets
     std::cout << "Total number of packets: " << packetData.count << std::endl;
-
 
     //Report the average, minimum, and maximum packet sizes. The packet size refers to everything beyond the tcpdump header
     std::cout << "Packet minimum size: " << packetData.min

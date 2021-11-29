@@ -1,7 +1,7 @@
 #include <iostream>
-#include <stdio.h>
 #include <map>
 #include <unordered_set>
+
 #include <pcap.h>
 #include <net/ethernet.h>
 #include <netinet/ether.h>//contains ether_ntoa
@@ -43,7 +43,7 @@ struct PacketStruct {
     int count;
 };
 
-void incrAddrOccurence(const std::string addr, std::map<std::string, int> &addrOccurMap) {    
+void incrAddrOccurence(const std::string &addr, std::map<std::string, int> &addrOccurMap) {
     if(!addrOccurMap.count(addr)) {
         addrOccurMap[addr] = 1;
     } else {
@@ -212,7 +212,7 @@ void got_packet(u_char *structPointer, const struct pcap_pkthdr *header, const u
 }
 
 template<typename T>
-void printAsList(std::string title, std::map<std::string, T> toPrint) {
+void printAsList(const std::string &title, std::map<std::string, T> &toPrint) {
     std::cout << title << ":" << std::endl;
     
     if(toPrint.size() == 0) {
@@ -227,7 +227,7 @@ void printAsList(std::string title, std::map<std::string, T> toPrint) {
 }
 
 template<typename T>
-void printAsList(std::string title, std::unordered_set<T> toPrint) {
+void printAsList(const std::string &title, std::unordered_set<T> &toPrint) {
     std::cout << title << ":" << std::endl;
 
     if(toPrint.size() == 0) {
@@ -243,6 +243,13 @@ void printAsList(std::string title, std::unordered_set<T> toPrint) {
 
 int main(int argc, char *argv[])
 {
+    // Output error that pcap file was not given
+    if(argc < 2) {
+        std::cerr << "Usage: " << argv[0] << " <pcap_file_name>" << std::endl;
+        std::cerr.flush();
+        return 2;
+    }
+
     char *fname = argv[1];
     char *errbuf;
     pcap_t *handle;
